@@ -108,6 +108,6 @@ stages:
              kubernetesServiceConnection: 'aksConnection'
              namespace: '$(k8sNamespace)'
              manifests: |
-              manifests/*.yaml
+              product-service1/manifests/*.yaml
              containers: |
               $(dockerImage)
