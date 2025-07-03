@@ -1,0 +1,82 @@
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  dockerRegistryServiceConnection: 'acrproductservice' # ACR service connection
+  imageRepository: 'product-service'
+  containerRegistry: 'prod-aks.azurecr.io'
+  dockerImage: '$(containerRegistry)/$(imageRepository):$(Build.BuildId)'
+  azureSubscriptionEndpoint: 'azureConnection'         # AzureRM connection
+  kubernetesServiceConnection: 'aksConnection'         # Kubernetes-type connection
+  k8sNamespace: 'default'
+  manifestsPath: 'manifests/'
+
+stages:
+- stage: Build
+  displayName: 'Build and Push Docker Image'
+  jobs:
+  - job: Build
+    displayName: 'Build & Push'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: Maven@4
+      inputs:
+        mavenPomFile: 'pom.xml'
+        goals: 'package'
+        publishJUnitResults: true
+        testResultsFiles: '**/surefire-reports/TEST-*.xml'
+        javaHomeOption: 'JDKVersion'
+        jdkVersionOption: '1.17'              # ✅ Required with JDKVersion
+        mavenVersionOption: 'Default'
+        mavenAuthenticateFeed: false
+        effectivePomSkip: false
+        sonarQubeRunAnalysis: false
+    - task: PublishTestResults@2
+      displayName: 'Publish JUnit Test Results'
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/surefire-reports/TEST-*.xml'
+        searchFolder: '$(System.DefaultWorkingDirectory)'
+        mergeTestResults: true
+        failTaskOnFailedTests: false
+    - task: Docker@2
+      inputs:
+        containerRegistry: '$(dockerRegistryServiceConnection)'
+        repository: '$(imageRepository)'
+        command: 'buildAndPush'
+        Dockerfile: '**/Dockerfile'
+        tags: |
+          $(Build.BuildId)
+
+- stage: Deploy
+  displayName: 'Deploy to AKS'
+  dependsOn: Build
+  jobs:
+  - job: Deploy
+    displayName: 'Deploy to Kubernetes'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: Kubernetes@1
+      displayName: 'Configure kubectl'
+      inputs:
+        connectionType: 'Azure Resource Manager'
+        azureSubscriptionEndpoint: '$(azureSubscriptionEndpoint)'
+        azureResourceGroup: 'prod-rg'       # 👈 update this
+        kubernetesCluster: 'prod-aks'           # 👈 update this
+        command: 'login'
+        useClusterAdmin: true
+
+    - task: KubernetesManifest@1
+      displayName: 'Deploy manifests to AKS'
+      inputs:
+         action: 'deploy'
+         connectionType: 'kubernetesServiceConnection'
+         kubernetesServiceConnection: 'aksConnection'
+         namespace: '$(k8sNamespace)'
+         manifests: '$(manifestsPath)/*.yaml'
+         containers: '$(dockerImage)'
