@@ -19,7 +19,7 @@ pool:
 variables:
   dockerRegistryServiceConnection: 'acrproductservice' # ACR service connection
   imageRepository: 'product-service'
-  containerRegistry: 'prod-aks.azurecr.io'
+  containerRegistry: 'acrsuhi.azurecr.io'
   dockerImage: '$(containerRegistry)/$(imageRepository):$(Build.BuildId)'
   azureSubscriptionEndpoint: 'azureConnection'         # AzureRM connection
   kubernetesServiceConnection: 'aksConnection'         # Kubernetes-type connection
