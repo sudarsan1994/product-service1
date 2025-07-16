@@ -100,6 +100,7 @@ stages:
              command: 'login'
              useClusterAdmin: true
 
+
           - task: KubernetesManifest@1
             displayName: 'Deploy manifests to AKS'
             inputs:
