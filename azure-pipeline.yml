@@ -106,8 +106,8 @@ stages:
              action: 'deploy'
              connectionType: 'kubernetesServiceConnection'
              kubernetesServiceConnection: 'aksConnection'
-             namespace: '$(k8sNamespace)'
-             manifests: |
-              $(manifestsPath)/*.yaml
+             namespace: '$(k8sNamespace)'  
+             manifests: '$(Build.SourcesDirectory)/manifests/*.yaml'
+             #manifests: $(manifestsPath)/*.yaml
              containers: |
               $(dockerImage)
